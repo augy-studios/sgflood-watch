@@ -735,6 +735,14 @@ html, body {
 .toast.success { border-left: 4px solid var(--minor); }
 .toast.error   { border-left: 4px solid var(--extreme); }
 
+/* ── Icon Colours ── */
+.location-icon i { color: var(--brand-dark); font-size: 1em; }
+.danger-icon i { color: #cc1100; font-size: 1em; }
+.all-clear-icon i { color: var(--minor); }
+.header-logo i { color: var(--brand-text); }
+.fetch-error i { color: inherit; }
+.toast i { vertical-align: middle; }
+
 /* ── Animations ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }

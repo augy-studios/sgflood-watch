@@ -102,11 +102,25 @@ function countdown(isoStr) {
 }
 
 // ── Toast
+const TOAST_ICONS = {
+    error: 'fa-circle-exclamation',
+    cancel: 'fa-triangle-exclamation',
+    success: 'fa-circle-check',
+};
+
 function showToast(msg, type = '', duration = 4000) {
     const tc = document.getElementById('toast-container');
     const el = document.createElement('div');
     el.className = `toast ${type}`;
-    el.textContent = msg;
+    const iconClass = TOAST_ICONS[type];
+    if (iconClass) {
+        const icon = document.createElement('i');
+        icon.className = `fas ${iconClass}`;
+        el.appendChild(icon);
+        el.appendChild(document.createTextNode(' ' + msg));
+    } else {
+        el.textContent = msg;
+    }
     tc.appendChild(el);
     setTimeout(() => {
         el.style.opacity = '0';
@@ -170,7 +184,7 @@ function updateMap() {
         <span style="font-size:0.8em;color:#555">${alert.areaDesc || ''}</span><br/>
         <span style="background:${colour};color:#fff;font-size:0.72em;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:4px">${alert.severity || 'Unknown'}</span><br/>
         <p style="margin-top:6px;font-size:0.82em;color:#333">${alert.description || ''}</p>
-        <em style="font-size:0.75em;color:#888">⚠️ Circle = broadcast radius only</em>
+        <em style="font-size:0.75em;color:#888"><i class="fas fa-triangle-exclamation"></i> Circle = broadcast radius only</em>
       </div>
     `);
         alertCircles.push(circle);
@@ -297,18 +311,18 @@ function renderCard(alert, container, refLat, refLng, expired = false) {
         ${expired ? `<span class="urgency-badge">Resolved</span>` : ''}
         <span class="severity-badge ${sc}">${alert.severity || 'Unknown'}</span>
         ${alert.urgency && !isCancel ? `<span class="urgency-badge">${alert.urgency}</span>` : ''}
-        ${isNearby && !expired ? `<span class="nearby-tag">📍 Near You</span>` : ''}
+        ${isNearby && !expired ? `<span class="nearby-tag"><i class="fas fa-location-dot"></i> Near You</span>` : ''}
       </div>
     </div>
-    ${alert.areaDesc ? `<div class="alert-area">📌 ${alert.areaDesc}</div>` : ''}
+    ${alert.areaDesc ? `<div class="alert-area"><i class="fas fa-map-pin"></i> ${alert.areaDesc}</div>` : ''}
     ${alert.description ? `<div class="alert-desc">${alert.description}</div>` : ''}
-    ${alert.instruction && !isCancel ? `<div class="alert-instruction">💡 ${alert.instruction}</div>` : ''}
+    ${alert.instruction && !isCancel ? `<div class="alert-instruction"><i class="fas fa-lightbulb"></i> ${alert.instruction}</div>` : ''}
     <div class="alert-footer">
       <div>
         ${cdInfo.text ? `<div class="alert-countdown ${cdInfo.urgent ? 'urgent' : ''}" data-expires="${alert.expires || ''}">${cdInfo.text}</div>` : ''}
-        ${distText ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:3px">📏 ${distText}</div>` : ''}
+        ${distText ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"><i class="fas fa-ruler"></i> ${distText}</div>` : ''}
       </div>
-      ${c ? `<button class="alert-map-btn" data-lat="${c.lat}" data-lng="${c.lng}">🗺️ Show on Map</button>` : ''}
+      ${c ? `<button class="alert-map-btn" data-lat="${c.lat}" data-lng="${c.lng}"><i class="fas fa-map"></i> Show on Map</button>` : ''}
     </div>
   `;
 
@@ -395,14 +409,14 @@ async function fetchAlerts() {
         const cancelledNow = State.alerts.filter(a => a.msgType === 'Cancel');
         cancelledNow.forEach(a => {
             if (!prev.includes(a.alertId)) {
-                showToast(`⚠️ Alert Cancelled: ${a.headline || a.areaDesc || 'Flood alert cancelled'}`, 'cancel');
+                showToast(`Alert Cancelled: ${a.headline || a.areaDesc || 'Flood alert cancelled'}`, 'cancel');
             }
         });
 
         // Detect new alerts
         State.alerts.filter(a => a.msgType !== 'Cancel').forEach(a => {
             if (!prev.includes(a.alertId)) {
-                showToast(`🚨 New Alert: ${a.headline || a.areaDesc || 'Flood alert issued'}`, 'error', 6000);
+                showToast(`New Alert: ${a.headline || a.areaDesc || 'Flood alert issued'}`, 'error', 6000);
             }
         });
 
@@ -519,18 +533,18 @@ async function enableNotifications() {
     const statusEl = document.getElementById('notif-status-text');
 
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        statusEl.textContent = '❌ Push notifications are not supported in this browser.';
+        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Push notifications are not supported in this browser.';
         return;
     }
 
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
-        statusEl.textContent = '❌ Permission denied. Please enable in browser settings.';
+        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Permission denied. Please enable in browser settings.';
         return;
     }
 
     try {
-        statusEl.textContent = '⏳ Registering…';
+        statusEl.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i> Registering…';
         const reg = await navigator.serviceWorker.ready;
         const subscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -550,11 +564,13 @@ async function enableNotifications() {
             })
         });
 
-        statusEl.textContent = '✅ Notifications enabled! You\'ll be alerted when a flood warning is issued near you.';
+        statusEl.innerHTML = '<i class="fas fa-circle-check"></i> Notifications enabled! You\'ll be alerted when a flood warning is issued near you.';
         showToast('Push notifications enabled!', 'success');
     } catch (err) {
         console.error('Push subscription error:', err);
-        statusEl.textContent = `❌ Failed to enable notifications: ${err.message}`;
+        const errMsg = document.createTextNode(` Failed to enable notifications: ${err.message}`);
+        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i>';
+        statusEl.appendChild(errMsg);
     }
 }
 
@@ -616,14 +632,14 @@ async function boot() {
     // Location grant
     document.getElementById('grant-location-btn').addEventListener('click', async () => {
         const btn = document.getElementById('grant-location-btn');
-        btn.textContent = '⏳ Getting location…';
+        btn.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i> Getting location…';
         btn.disabled = true;
         try {
             const pos = await requestLocation();
             State.userLat = pos.lat;
             State.userLng = pos.lng;
             State.locationLabel = await reverseGeocode(pos.lat, pos.lng);
-            document.getElementById('location-label').textContent = `📍 ${State.locationLabel}`;
+            document.getElementById('location-label').textContent = State.locationLabel;
             document.getElementById('location-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
 
@@ -636,7 +652,7 @@ async function boot() {
             // Countdown ticker
             State.countdownInterval = setInterval(tickCountdowns, 1000);
         } catch (err) {
-            btn.textContent = '📍 Allow Location Access';
+            btn.innerHTML = '<i class="fas fa-location-dot"></i> Allow Location Access';
             btn.disabled = false;
             showToast('Could not get your location. Please allow location access.', 'error');
         }
@@ -650,7 +666,8 @@ async function handleSearch() {
         State.searchLat = null;
         State.searchLng = null;
         State.searchLabel = null;
-        document.getElementById('location-label').textContent = `📍 ${State.locationLabel || 'Your Location'}`;
+        document.getElementById('location-icon').className = 'fas fa-location-dot';
+        document.getElementById('location-label').textContent = State.locationLabel || 'Your Location';
         renderAlerts();
         updateMap();
         return;
@@ -666,7 +683,8 @@ async function handleSearch() {
     State.searchLat = result.lat;
     State.searchLng = result.lng;
     State.searchLabel = result.label;
-    document.getElementById('location-label').textContent = `🔍 ${result.label}`;
+    document.getElementById('location-icon').className = 'fas fa-magnifying-glass';
+    document.getElementById('location-label').textContent = result.label;
 
     renderAlerts();
     updateMap();
