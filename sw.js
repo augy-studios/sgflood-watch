@@ -4,7 +4,7 @@ const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
-  '/app.js',
+  '/script.js',
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans:wght@300;400;500;600;700&display=swap',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

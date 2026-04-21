@@ -642,6 +642,7 @@ async function boot() {
             document.getElementById('location-label').textContent = State.locationLabel;
             document.getElementById('location-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
+            map.invalidateSize();
 
             // Initial fetch
             await fetchAlerts();
