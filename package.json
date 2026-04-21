@@ -1,0 +1,11 @@
+{
+    "name": "sg-flood-watch",
+    "version": "1.0.0",
+    "description": "SG Flood Watch - Real-time flood alerts for Singapore",
+    "private": true,
+    "dependencies": {
+        "node-fetch": "^3.3.2",
+        "web-push": "^3.6.7",
+        "@supabase/supabase-js": "^2.45.0"
+    }
+}

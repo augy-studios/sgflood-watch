@@ -3,8 +3,18 @@
     "version": 2,
     "cleanUrls": true,
     "regions": ["sin1"],
-    "rewrites": [{
-        "source": "/",
-        "destination": "/"
+    "routes": [{
+            "src": "/api/(.*)",
+            "dest": "/api/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/public/$1"
+        }
+    ],
+    "crons": [{
+        "path": "/api/send-push",
+        "schedule": "*/3 * * * *"
     }]
+
 }

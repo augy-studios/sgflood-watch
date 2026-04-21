@@ -1,12 +1,18 @@
 {
-    "name": "Template by UwU Apps",
-    "short_name": "UwU Template",
-    "description": "A simple template app; view live template at a glance!",
+    "name": "SG Flood Watch by UwU Apps",
+    "short_name": "SG Flood Watch",
+    "description": "Real-time Singapore flood alerts at your fingertips!",
     "icons": [{
-        "src": "templateicon1.png",
-        "type": "image/png",
-        "sizes": "512x512"
-    }],
+            "src": "SGFW-512.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        },
+        {
+            "src": "SGFW-192.png",
+            "type": "image/png",
+            "sizes": "192x192"
+        }
+    ],
     "screenshots": [{
             "src": "/images/screenshot_1.png",
             "type": "image/png",
@@ -26,7 +32,7 @@
     "display": "standalone",
     "display_override": ["fullscreen", "minimal-ui", "window-controls-overlay"],
     "orientation": "portrait-primary",
-    "id": "template",
+    "id": "sgfw",
     "dir": "ltr",
     "scope": "/",
     "lang": "en",
