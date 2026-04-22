@@ -114,6 +114,7 @@
             <div class="my-location-display">
                 <i id="location-icon" class="fas fa-location-dot"></i>
                 <span id="location-label">Locating…</span>
+                <button id="refresh-location-btn" class="icon-btn icon-btn-sm" title="Update my location"><i class="fas fa-rotate-right"></i></button>
             </div>
             <div class="search-row">
                 <input id="search-input" type="text" placeholder="Search area (e.g. Orchard, Tampines…)"
@@ -210,9 +211,13 @@
                 <button class="modal-close" data-close="notif-modal">✕</button>
             </div>
             <div class="modal-body">
-                <p>Get notified when a new flood alert is issued near your saved locations.</p>
+                <p>Get notified when a new flood alert is issued near your current location.</p>
                 <div id="notif-status-text" class="notif-status"></div>
                 <button id="enable-notif-btn" class="btn btn-primary">Enable Notifications</button>
+                <div id="notif-subscriptions-section" class="notif-subscriptions hidden">
+                    <h4 class="notif-sub-heading"><i class="fas fa-bell"></i> Enabled Locations</h4>
+                    <div id="notif-subscriptions-list"></div>
+                </div>
             </div>
         </div>
     </div>

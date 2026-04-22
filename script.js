@@ -387,6 +387,8 @@ function checkDanger() {
 
 // ── Fetch alerts
 const CACHE_KEY = 'sgfw_last_alerts';
+const LOCATION_KEY = 'sgfw_location';
+const SUBSCRIPTIONS_KEY = 'sgfw_subscriptions';
 
 async function fetchAlerts() {
     const si = document.getElementById('status-indicator');
@@ -551,6 +553,7 @@ async function enableNotifications() {
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
 
+        const label = State.locationLabel || 'My Location';
         await fetch('/api/subscribe', {
             method: 'POST',
             headers: {
@@ -560,10 +563,13 @@ async function enableNotifications() {
                 subscription,
                 lat: State.userLat,
                 lng: State.userLng,
-                label: State.locationLabel || 'My Location'
+                label
             })
         });
 
+        saveSubscription(subscription.endpoint, label, State.userLat, State.userLng);
+        updateNotifModalStatus();
+        renderSubscriptionsList();
         statusEl.innerHTML = '<i class="fas fa-circle-check"></i> Notifications enabled! You\'ll be alerted when a flood warning is issued near you.';
         showToast('Push notifications enabled!', 'success');
     } catch (err) {
@@ -571,6 +577,102 @@ async function enableNotifications() {
         const errMsg = document.createTextNode(` Failed to enable notifications: ${err.message}`);
         statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i>';
         statusEl.appendChild(errMsg);
+    }
+}
+
+// ── Location persistence
+function saveLocation(lat, lng, label) {
+    localStorage.setItem(LOCATION_KEY, JSON.stringify({ lat, lng, label }));
+}
+
+function loadSavedLocation() {
+    try {
+        const saved = localStorage.getItem(LOCATION_KEY);
+        return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+}
+
+// ── Subscription persistence (local tracking)
+function getSavedSubscriptions() {
+    try {
+        const saved = localStorage.getItem(SUBSCRIPTIONS_KEY);
+        return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+}
+
+function saveSubscription(endpoint, label, lat, lng) {
+    const subs = getSavedSubscriptions();
+    const idx = subs.findIndex(s => s.endpoint === endpoint);
+    const entry = { endpoint, label, lat, lng };
+    if (idx >= 0) subs[idx] = entry;
+    else subs.push(entry);
+    localStorage.setItem(SUBSCRIPTIONS_KEY, JSON.stringify(subs));
+}
+
+function removeSubscription(endpoint) {
+    const subs = getSavedSubscriptions().filter(s => s.endpoint !== endpoint);
+    localStorage.setItem(SUBSCRIPTIONS_KEY, JSON.stringify(subs));
+}
+
+function renderSubscriptionsList() {
+    const subs = getSavedSubscriptions();
+    const section = document.getElementById('notif-subscriptions-section');
+    const list = document.getElementById('notif-subscriptions-list');
+
+    if (subs.length === 0) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    list.innerHTML = '';
+    subs.forEach(sub => {
+        const item = document.createElement('div');
+        item.className = 'notif-subscription-item';
+        item.innerHTML = `
+            <div class="notif-sub-info">
+                <i class="fas fa-location-dot"></i>
+                <span>${sub.label || 'My Location'}</span>
+            </div>
+            <button class="btn-turn-off" data-endpoint="${sub.endpoint}">
+                <i class="fas fa-bell-slash"></i> Turn Off
+            </button>
+        `;
+        item.querySelector('button').addEventListener('click', () => {
+            disableNotificationForLocation(sub.endpoint, sub.label);
+        });
+        list.appendChild(item);
+    });
+}
+
+async function disableNotificationForLocation(endpoint, label) {
+    try {
+        await fetch('/api/subscribe', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint })
+        });
+        removeSubscription(endpoint);
+        renderSubscriptionsList();
+        updateNotifModalStatus();
+        showToast(`Notifications disabled for ${label || 'this location'}`, 'success');
+    } catch (err) {
+        showToast('Failed to turn off notifications', 'error');
+    }
+}
+
+function updateNotifModalStatus() {
+    const statusEl = document.getElementById('notif-status-text');
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Push notifications are not supported in this browser.';
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Permission denied. Please enable notifications in your browser settings.';
+    } else if (Notification.permission === 'granted' && getSavedSubscriptions().length > 0) {
+        statusEl.innerHTML = '<i class="fas fa-circle-check"></i> Notifications are active. You can add more locations below.';
+    } else {
+        statusEl.innerHTML = '';
     }
 }
 
@@ -592,6 +694,8 @@ async function boot() {
     // Bind notification
     document.getElementById('notif-btn').addEventListener('click', () => {
         document.getElementById('notif-modal').classList.remove('hidden');
+        updateNotifModalStatus();
+        renderSubscriptionsList();
     });
     document.getElementById('enable-notif-btn').addEventListener('click', enableNotifications);
 
@@ -639,25 +743,66 @@ async function boot() {
             State.userLat = pos.lat;
             State.userLng = pos.lng;
             State.locationLabel = await reverseGeocode(pos.lat, pos.lng);
-            document.getElementById('location-label').textContent = State.locationLabel;
-            document.getElementById('location-screen').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
-            map.invalidateSize();
-
-            // Initial fetch
-            await fetchAlerts();
-
-            // Auto-refresh every 3 minutes
-            State.refreshTimer = setInterval(fetchAlerts, 3 * 60 * 1000);
-
-            // Countdown ticker
-            State.countdownInterval = setInterval(tickCountdowns, 1000);
+            saveLocation(State.userLat, State.userLng, State.locationLabel);
+            launchApp();
         } catch (err) {
             btn.innerHTML = '<i class="fas fa-location-dot"></i> Allow Location Access';
             btn.disabled = false;
             showToast('Could not get your location. Please allow location access.', 'error');
         }
     });
+
+    // Refresh saved location
+    document.getElementById('refresh-location-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('refresh-location-btn');
+        btn.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i>';
+        btn.disabled = true;
+        try {
+            const pos = await requestLocation();
+            State.userLat = pos.lat;
+            State.userLng = pos.lng;
+            State.locationLabel = await reverseGeocode(pos.lat, pos.lng);
+            saveLocation(State.userLat, State.userLng, State.locationLabel);
+            document.getElementById('location-label').textContent = State.locationLabel;
+            State.searchLat = null;
+            State.searchLng = null;
+            State.searchLabel = null;
+            document.getElementById('location-icon').className = 'fas fa-location-dot';
+            renderAlerts();
+            updateMap();
+            showToast('Location updated', 'success');
+        } catch (err) {
+            showToast('Could not update location.', 'error');
+        } finally {
+            btn.innerHTML = '<i class="fas fa-rotate-right"></i>';
+            btn.disabled = false;
+        }
+    });
+
+    // Restore saved location if available
+    const saved = loadSavedLocation();
+    if (saved) {
+        State.userLat = saved.lat;
+        State.userLng = saved.lng;
+        State.locationLabel = saved.label;
+        launchApp();
+    }
+}
+
+async function launchApp() {
+    document.getElementById('location-label').textContent = State.locationLabel;
+    document.getElementById('location-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    map.invalidateSize();
+
+    await fetchAlerts();
+
+    if (!State.refreshTimer) {
+        State.refreshTimer = setInterval(fetchAlerts, 3 * 60 * 1000);
+    }
+    if (!State.countdownInterval) {
+        State.countdownInterval = setInterval(tickCountdowns, 1000);
+    }
 }
 
 async function handleSearch() {
