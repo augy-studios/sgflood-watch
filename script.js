@@ -676,6 +676,33 @@ function updateNotifModalStatus() {
     }
 }
 
+// ── Auto-locate when geolocation permission already granted (no saved location)
+async function tryAutoLocate() {
+    if (!navigator.permissions) return;
+    let permState;
+    try {
+        const perm = await navigator.permissions.query({ name: 'geolocation' });
+        permState = perm.state;
+    } catch { return; }
+    if (permState !== 'granted') return;
+
+    State.locationLabel = 'Locating…';
+    launchApp();
+    try {
+        const pos = await requestLocation();
+        State.userLat = pos.lat;
+        State.userLng = pos.lng;
+        State.locationLabel = await reverseGeocode(pos.lat, pos.lng);
+        saveLocation(State.userLat, State.userLng, State.locationLabel);
+        document.getElementById('location-label').textContent = State.locationLabel;
+        renderAlerts();
+        updateMap();
+        checkDanger();
+    } catch {
+        showToast('Could not get your location. Please allow access.', 'error');
+    }
+}
+
 // ── Boot
 async function boot() {
     applyTheme(State.theme);
@@ -786,6 +813,19 @@ async function boot() {
         State.userLng = saved.lng;
         State.locationLabel = saved.label;
         launchApp();
+        // Silently refresh location in background so coordinates stay current
+        requestLocation().then(async pos => {
+            const label = await reverseGeocode(pos.lat, pos.lng);
+            State.userLat = pos.lat;
+            State.userLng = pos.lng;
+            State.locationLabel = label;
+            saveLocation(pos.lat, pos.lng, label);
+            document.getElementById('location-label').textContent = label;
+            renderAlerts();
+            updateMap();
+        }).catch(() => {});
+    } else {
+        tryAutoLocate();
     }
 }
 
