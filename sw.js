@@ -1,4 +1,4 @@
-const CACHE = "sgfw-offline-v1";
+const CACHE = "sgfw-v1";
 
 const ASSETS = [
   '/',

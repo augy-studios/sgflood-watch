@@ -423,18 +423,15 @@ html, body {
 }
 
 .map-legend {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 500;
+  margin-top: 10px;
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 12px;
   font-size: 0.75rem;
   color: var(--text-secondary);
-  max-width: 200px;
 }
 
 .legend-title { font-family: var(--font-display); font-size: 0.85rem; color: var(--text-primary); margin-bottom: 2px; }
