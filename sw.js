@@ -1,19 +1,34 @@
-const CACHE = "sgfw-v1";
+const CACHE = "sgfw-v2";
 
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/script.js',
+  '/lib/uwu-request-signing.js',
   '/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans:wght@300;400;500;600;700&display=swap',
+  '/favicon.ico',
+  '/SGFW-main.png',
+  '/SGFW-192.png',
+  '/SGFW-512.png',
+  'https://fonts.googleapis.com/css?family=Jua',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
+  'https://use.fontawesome.com/releases/v6.5.2/js/all.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE).then((cache) =>
+      // Cache each asset individually so one failed request (e.g. a CDN
+      // hiccup) doesn't abort caching for every other asset like addAll() would.
+      Promise.allSettled(
+        ASSETS.map((url) =>
+          fetch(url).then((res) => res.ok && cache.put(url, res))
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
