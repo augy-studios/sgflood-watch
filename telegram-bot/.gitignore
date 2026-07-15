@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# SQLite database (and WAL/SHM sidecar files)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS cruft
+.DS_Store
+Thumbs.db
