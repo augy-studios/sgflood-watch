@@ -1,6 +1,6 @@
 import { getSchedule, upsertSchedule, getSeenAlert, upsertSeenAlert, getActiveSeenAlertKeys, getAllSubscribers } from './db.js';
 import { fetchFloodAlerts, alertKey, isActive } from './lta.js';
-import { formatAlert, escapeHtml } from './format.js';
+import { formatAlert, escapeMarkdownV2 } from './format.js';
 
 const JOB_NAME = 'poll_alerts';
 const TICK_MS = 30_000; // how often the loop wakes up to check the schedule table
@@ -9,7 +9,7 @@ async function broadcast(bot, text) {
     const subscribers = getAllSubscribers();
     for (const { chat_id } of subscribers) {
         try {
-            await bot.telegram.sendMessage(chat_id, text, { parse_mode: 'HTML' });
+            await bot.telegram.sendMessage(chat_id, text, { parse_mode: 'MarkdownV2' });
         } catch (err) {
             // A blocked/deleted chat shouldn't take down the whole broadcast.
             console.error(`Failed to notify chat ${chat_id}:`, err.message);
@@ -35,13 +35,13 @@ async function pollOnce(bot, seedOnly) {
             currentActiveKeys.add(key);
             const isNew = !previouslySeen || previouslySeen.status !== 'active';
             if (isNew && !seedOnly) {
-                await broadcast(bot, `🚨 <b>New flood alert</b>\n\n${formatAlert(alert)}`);
+                await broadcast(bot, `🚨 *New flood alert*\n\n${formatAlert(alert)}`);
             }
             upsertSeenAlert(key, alert.headline, alert.areaDesc, 'active');
         } else {
             const wasActive = previouslySeen && previouslySeen.status === 'active';
             if (wasActive && !seedOnly) {
-                await broadcast(bot, `✅ <b>Flood alert cancelled</b>\n\n${escapeHtml(alert.headline || 'A flood alert')} has been called off.`);
+                await broadcast(bot, `✅ *Flood alert cancelled*\n\n${escapeMarkdownV2(alert.headline || 'A flood alert')} has been called off\\.`);
             }
             upsertSeenAlert(key, alert.headline, alert.areaDesc, 'cancelled');
         }

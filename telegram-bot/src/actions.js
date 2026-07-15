@@ -1,6 +1,6 @@
 import { subscribe, unsubscribe, isSubscribed } from './db.js';
 import { fetchFloodAlerts } from './lta.js';
-import { formatActiveAlertsList } from './format.js';
+import { formatActiveAlertsList, escapeMarkdownV2 } from './format.js';
 import { button } from './interactions.js';
 
 const WEBAPP_URL = process.env.WEBAPP_URL || 'https://sgflood.uwuapps.org';
@@ -9,7 +9,7 @@ const DONATE_URL = process.env.DONATE_URL || 'https://sgflood.uwuapps.org';
 export function doSubscribe(chatId, from) {
     subscribe(chatId, from?.username, from?.first_name);
     return {
-        text: '🔔 You\'re subscribed! You\'ll get a message here whenever a flood alert is issued or cancelled anywhere in Singapore.',
+        text: '🔔 You\'re subscribed\\! You\'ll get a message here whenever a flood alert is issued or cancelled anywhere in Singapore\\.',
         keyboard: [[button('🔕 Unsubscribe', chatId, 'unsub')]]
     };
 }
@@ -17,7 +17,7 @@ export function doSubscribe(chatId, from) {
 export function doUnsubscribe(chatId) {
     unsubscribe(chatId);
     return {
-        text: '🔕 You\'re unsubscribed. You won\'t receive any more automatic flood alert messages.',
+        text: '🔕 You\'re unsubscribed\\. You won\'t receive any more automatic flood alert messages\\.',
         keyboard: [[button('🔔 Subscribe again', chatId, 'sub')]]
     };
 }
@@ -26,15 +26,15 @@ export function doMySub(chatId) {
     const subbed = isSubscribed(chatId);
     return {
         text: subbed
-            ? '🔔 You are currently <b>subscribed</b> to all flood alert updates.'
-            : '🔕 You are currently <b>not subscribed</b> to flood alert updates.',
+            ? '🔔 You are currently *subscribed* to all flood alert updates\\.'
+            : '🔕 You are currently *not subscribed* to flood alert updates\\.',
         keyboard: [[subbed ? button('🔕 Unsubscribe', chatId, 'unsub') : button('🔔 Subscribe', chatId, 'sub')]]
     };
 }
 
 export async function doStatus(chatId) {
     const { ok, alerts, error } = await fetchFloodAlerts();
-    if (!ok) return { text: `⚠️ Couldn't reach the LTA flood alert API right now (${error}). Try again shortly.`, keyboard: [] };
+    if (!ok) return { text: `⚠️ Couldn't reach the LTA flood alert API right now \\(${escapeMarkdownV2(error)}\\)\\. Try again shortly\\.`, keyboard: [] };
 
     const active = alerts.filter(a => a.msgType !== 'Cancel');
     return {
@@ -45,11 +45,11 @@ export async function doStatus(chatId) {
 
 export function startMessage() {
     const text = [
-        '🌊 <b>SG Flood Watch</b>',
+        '🌊 *SG Flood Watch*',
         '',
-        'Real-time Singapore flood alerts, sourced live from LTA DataMall\'s flood alert feed.',
+        'Real\\-time Singapore flood alerts, sourced live from LTA DataMall\'s flood alert feed\\.',
         '',
-        '<b>Commands</b>',
+        '*Commands*',
         '/sub \\- subscribe to all flood alert updates',
         '/unsub \\- unsubscribe from all flood alert updates',
         '/mysub \\- check your current subscription status',
@@ -57,7 +57,7 @@ export function startMessage() {
         '/status \\- see all active alerts right now',
         '/cancel \\- cancel whatever this bot is currently asking you for',
         '',
-        'You can also just type a place name (e.g. "Bukit Timah" or "Orchard Road") and the bot will look up the flood status there.'
+        'You can also just type a place name \\(e\\.g\\. "Bukit Timah" or "Orchard Road"\\) and the bot will look up the flood status there\\.'
     ].join('\n');
 
     return {
