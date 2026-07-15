@@ -331,6 +331,7 @@ html, body {
   transition: all var(--transition);
   backdrop-filter: blur(8px);
   color: var(--text-primary);
+  text-decoration: none;
 }
 .icon-btn:hover { transform: scale(1.08); background: rgba(255,255,255,0.75); }
 
