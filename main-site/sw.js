@@ -1,4 +1,4 @@
-const CACHE = "sgfw-v4";
+const CACHE = "sgfw-v5";
 
 const ASSETS = [
   '/',
@@ -59,6 +59,13 @@ self.addEventListener('fetch', event => {
         }
       }))
     );
+    return;
+  }
+
+  // Let all other cross-origin requests (e.g. Nominatim geocoding) go straight
+  // to the network untouched — only proxy same-origin requests and the
+  // whitelisted third-party assets we actually want to cache.
+  if (url.origin !== self.location.origin && !ASSETS.includes(event.request.url)) {
     return;
   }
 
