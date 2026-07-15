@@ -50,12 +50,12 @@ export function startMessage() {
         'Real-time Singapore flood alerts, sourced live from LTA DataMall\'s flood alert feed.',
         '',
         '<b>Commands</b>',
-        '/sub — subscribe to all flood alert updates',
-        '/unsub — unsubscribe from all flood alert updates',
-        '/mysub — check your current subscription status',
-        '/nearme — check flood status near your current location',
-        '/status — see all active alerts right now',
-        '/cancel — cancel whatever this bot is currently asking you for',
+        '/sub \\- subscribe to all flood alert updates',
+        '/unsub \\- unsubscribe from all flood alert updates',
+        '/mysub \\- check your current subscription status',
+        '/nearme \\- check flood status near your current location',
+        '/status \\- see all active alerts right now',
+        '/cancel \\- cancel whatever this bot is currently asking you for',
         '',
         'You can also just type a place name (e.g. "Bukit Timah" or "Orchard Road") and the bot will look up the flood status there.'
     ].join('\n');

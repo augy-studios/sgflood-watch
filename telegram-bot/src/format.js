@@ -22,7 +22,7 @@ export function formatAlert(alert, refLat = null, refLng = null) {
 
     if (refLat !== null && refLng !== null) {
         const dist = formatDistance(distanceToAlert(refLat, refLng, alert));
-        const nearTag = isNearby(refLat, refLng, alert) ? ' — ⚠️ <b>near you</b>' : '';
+        const nearTag = isNearby(refLat, refLng, alert) ? ' \\- ⚠️ <b>near you</b>' : '';
         if (dist) lines.push(`📏 ${dist}${nearTag}`);
     }
 
