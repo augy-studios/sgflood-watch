@@ -7,7 +7,7 @@ Real-time Singapore flood alerts, sourced live from LTA DataMall — available w
 | Platform | Description | Link |
 |---|---|---|
 | 🌐 Web app | Live map, danger overlay, push notifications, offline support | [main-site/](main-site) — [sgflood.uwuapps.org](https://sgflood.uwuapps.org) |
-| 🤖 Telegram bot | Subscribe to alerts, check flood status near you, no app install needed | [telegram-bot/](telegram-bot) |
+| 🤖 Telegram bot | Subscribe to alerts, check flood status near you, no app install needed | [telegram-bot/](telegram-bot) — [t.me/sgfloods_bot](https://t.me/sgfloods_bot) |
 
 ## Repository structure
 
