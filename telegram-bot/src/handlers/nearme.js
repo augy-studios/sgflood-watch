@@ -1,5 +1,5 @@
 import { Markup } from 'telegraf';
-import { setUserState, clearUserState } from '../db.js';
+import { setUserState, clearUserState, isSubscribed } from '../db.js';
 import { fetchFloodAlerts } from '../lta.js';
 import { formatActiveAlertsList, escapeMarkdownV2 } from '../format.js';
 import { button } from '../interactions.js';
@@ -31,10 +31,13 @@ export async function replyNearbyStatus(ctx, lat, lng, label) {
     // custom "send location" keyboard is cleared in its own message before
     // the inline "Subscribe" button is offered.
     await ctx.reply(text, { parse_mode: 'MarkdownV2', ...Markup.removeKeyboard() });
-    await ctx.reply('Want to be notified automatically next time?', {
-        parse_mode: 'MarkdownV2',
-        reply_markup: { inline_keyboard: [[button('🔔 Subscribe to all updates', ctx.chat.id, 'sub')]] }
-    });
+
+    if (!isSubscribed(ctx.chat.id)) {
+        await ctx.reply('Want to be notified automatically next time?', {
+            parse_mode: 'MarkdownV2',
+            reply_markup: { inline_keyboard: [[button('🔔 Subscribe to all updates', ctx.chat.id, 'sub')]] }
+        });
+    }
 }
 
 export async function locationMessageHandler(ctx) {
