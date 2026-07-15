@@ -1,24 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
-import { verifySignedRequest } from '../lib/uwu-request-signing-server.js';
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-);
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Request-Token, X-Request-TS, X-Key-ID');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({
         error: 'Method not allowed'
     });
-
-    const { valid, reason } = await verifySignedRequest(req, supabase);
-    if (!valid) return res.status(403).json({ error: reason });
 
     const apiKey = process.env.LTA_ACCOUNT_KEY;
     if (!apiKey) return res.status(500).json({

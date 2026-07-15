@@ -1,9 +1,5 @@
 'use strict';
 
-import { initGuestKey, signedFetch } from '/lib/uwu-request-signing.js';
-
-const APP_ID = 'sg-flood-watch';
-
 // ── State
 const State = {
     userLat: null,
@@ -409,7 +405,7 @@ async function fetchAlerts() {
     st.textContent = 'Refreshing…';
 
     try {
-        const res = await signedFetch('/api/flood-alerts');
+        const res = await fetch('/api/flood-alerts');
         const data = await res.json();
 
         if (!data.ok) throw new Error(data.error || 'Unknown error');
@@ -566,7 +562,7 @@ async function enableNotifications() {
         });
 
         const label = State.locationLabel || 'My Location';
-        await signedFetch('/api/subscribe', {
+        await fetch('/api/subscribe', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -659,7 +655,7 @@ function renderSubscriptionsList() {
 
 async function disableNotificationForLocation(endpoint, label) {
     try {
-        await signedFetch('/api/subscribe', {
+        await fetch('/api/subscribe', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ endpoint })
@@ -717,14 +713,6 @@ async function tryAutoLocate() {
 
 // ── Boot
 async function boot() {
-    // No login system on this site - every visitor is anonymous, so a guest
-    // signing key is required before any signedFetch() call can run.
-    try {
-        await initGuestKey(APP_ID);
-    } catch (err) {
-        console.error('Failed to obtain guest signing key:', err);
-    }
-
     applyTheme(State.theme);
     initMap();
 

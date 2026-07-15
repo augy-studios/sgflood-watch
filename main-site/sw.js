@@ -1,11 +1,10 @@
-const CACHE = "sgfw-v3";
+const CACHE = "sgfw-v4";
 
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/script.js',
-  '/lib/uwu-request-signing.js',
   '/manifest.json',
   '/favicon.ico',
   '/SGFW-main.png',

@@ -2,7 +2,6 @@ import {
     createClient
 } from '@supabase/supabase-js';
 import webpush from 'web-push';
-import { verifySignedRequest, readRawBody } from '../lib/uwu-request-signing-server.js';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -15,22 +14,12 @@ webpush.setVapidDetails(
     process.env.VAPID_PRIVATE_KEY
 );
 
-// Body parsing is done manually so the raw body text can be hashed for signature
-// verification before it's parsed as JSON.
-export const config = {
-    api: { bodyParser: false }
-};
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Request-Token, X-Request-TS, X-Key-ID');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
-
-    const rawBody = req.method === 'POST' || req.method === 'DELETE' ? await readRawBody(req) : '';
-    const { valid, reason } = await verifySignedRequest(req, supabase, rawBody);
-    if (!valid) return res.status(403).json({ error: reason });
 
     if (req.method === 'POST') {
         const {
@@ -38,7 +27,7 @@ export default async function handler(req, res) {
             lat,
             lng,
             label
-        } = JSON.parse(rawBody);
+        } = req.body;
         if (!subscription || !subscription.endpoint) {
             return res.status(400).json({
                 error: 'Invalid subscription object'
@@ -69,7 +58,7 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') {
         const {
             endpoint
-        } = JSON.parse(rawBody);
+        } = req.body;
         if (!endpoint) return res.status(400).json({
             error: 'endpoint required'
         });
