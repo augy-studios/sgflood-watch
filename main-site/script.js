@@ -168,6 +168,7 @@ function updateMap() {
     alertCircles = [];
 
     const activeAlerts = State.alerts.filter(a => a.msgType !== 'Cancel');
+    const nearbyCircles = [];
 
     activeAlerts.forEach(alert => {
         const c = parseCircle(alert.circle);
@@ -192,6 +193,7 @@ function updateMap() {
       </div>
     `);
         alertCircles.push(circle);
+        nearbyCircles.push({ layer: circle, lat: c.lat, lng: c.lng, radius: c.radius });
     });
 
     // User location marker
@@ -214,19 +216,25 @@ function updateMap() {
         }).addTo(map);
         userMarker.bindPopup(`<div style="font-family:'Jua',sans-serif">${State.searchLabel || State.locationLabel || 'Your Location'}</div>`);
 
-        if (activeAlerts.length > 0) {
-            // Fit to show user + all circles
+        // Only fit to alert circles that are actually near the reference point,
+        // so the map moves to (and stays focused on) the searched/current
+        // location instead of zooming out to fit every alert nationwide.
+        const localCircles = nearbyCircles.filter(nc => haversine(refLat, refLng, nc.lat, nc.lng) <= (nc.radius + 15));
+
+        if (localCircles.length > 0) {
             const latlngs = [L.latLng(refLat, refLng)];
-            alertCircles.forEach(c => {
-                const b = c.getBounds();
+            localCircles.forEach(nc => {
+                const b = nc.layer.getBounds();
                 latlngs.push(b.getNorthEast(), b.getSouthWest());
             });
-            if (latlngs.length > 1) map.fitBounds(L.latLngBounds(latlngs), {
-                padding: [30, 30]
+            map.flyToBounds(L.latLngBounds(latlngs), {
+                padding: [30, 30],
+                duration: 1
             });
-            else map.setView([refLat, refLng], 13);
         } else {
-            map.setView([refLat, refLng], 13);
+            map.flyTo([refLat, refLng], 14, {
+                duration: 1
+            });
         }
     } else if (activeAlerts.length > 0 && alertCircles.length > 0) {
         const bounds = alertCircles.reduce((b, c) => b.extend(c.getBounds()), alertCircles[0].getBounds());
@@ -762,6 +770,15 @@ async function boot() {
     document.getElementById('nearby-toggle').addEventListener('click', (e) => {
         State.nearbyOnly = !State.nearbyOnly;
         e.target.classList.toggle('active', State.nearbyOnly);
+        if (State.nearbyOnly) {
+            // "Near Me" always means the user's actual location, not a search result
+            State.searchLat = null;
+            State.searchLng = null;
+            State.searchLabel = null;
+            document.getElementById('search-input').value = '';
+            document.getElementById('location-icon').className = 'fas fa-location-dot';
+            document.getElementById('location-label').textContent = State.locationLabel || 'Your Location';
+        }
         renderAlerts();
         updateMap();
     });
