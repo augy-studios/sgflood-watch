@@ -1,4 +1,4 @@
-const CACHE = "sgfw-v6";
+const CACHE = "sgfw-v7";
 
 const ASSETS = [
   '/',
