@@ -1,5 +1,15 @@
 'use strict';
 
+import {
+    COLOR_THEMES,
+    applyColorTheme,
+    applyMode,
+    getStoredColorTheme,
+    getStoredMode,
+    initTheme
+} from './js/theme.js';
+import { hydrateIcons, openModal, closeModal } from './js/ui.js';
+
 // ── State
 const State = {
     userLat: null,
@@ -15,8 +25,19 @@ const State = {
     searchLabel: null,
     refreshTimer: null,
     countdownInterval: null,
-    theme: localStorage.getItem('sgfw_theme') || 'classic',
 };
+
+// innerHTML assignment plus icon hydration, so data-icon spans render.
+function setHtml(el, html) {
+    el.innerHTML = html;
+    hydrateIcons(el);
+}
+
+function setLocationIcon(name) {
+    const el = document.getElementById('location-icon');
+    el.setAttribute('data-icon', name);
+    hydrateIcons(el.parentElement);
+}
 
 // ── Map
 let map = null;
@@ -103,25 +124,26 @@ function countdown(isoStr) {
 
 // ── Toast
 const TOAST_ICONS = {
-    error: 'fa-circle-exclamation',
-    cancel: 'fa-triangle-exclamation',
-    success: 'fa-circle-check',
+    error: 'alert-circle',
+    cancel: 'alert-triangle',
+    success: 'check-circle',
 };
 
 function showToast(msg, type = '', duration = 4000) {
     const tc = document.getElementById('toast-container');
     const el = document.createElement('div');
     el.className = `toast ${type}`;
-    const iconClass = TOAST_ICONS[type];
-    if (iconClass) {
-        const icon = document.createElement('i');
-        icon.className = `fas ${iconClass}`;
-        el.appendChild(icon);
+    const iconName = TOAST_ICONS[type];
+    if (iconName) {
+        const iconEl = document.createElement('span');
+        iconEl.dataset.icon = iconName;
+        el.appendChild(iconEl);
         el.appendChild(document.createTextNode(' ' + msg));
     } else {
         el.textContent = msg;
     }
     tc.appendChild(el);
+    hydrateIcons(el);
     setTimeout(() => {
         el.style.opacity = '0';
         el.style.transform = 'translateX(20px)';
@@ -131,13 +153,63 @@ function showToast(msg, type = '', duration = 4000) {
 }
 
 // ── Theme
-function applyTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    State.theme = theme;
-    localStorage.setItem('sgfw_theme', theme);
-    document.querySelectorAll('.theme-option').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.theme === theme);
+function buildThemeModal() {
+    const grid = document.getElementById('swatchGrid');
+    grid.innerHTML = COLOR_THEMES.map(
+        (t) => `
+      <button class="swatch" data-theme-id="${t.id}" style="--swatch-color:${t.hex}" type="button" aria-label="${t.label}">
+        <span class="swatch-dot"></span>
+        <span class="swatch-label">${t.label}</span>
+      </button>`
+    ).join('');
+
+    syncThemeModalState();
+
+    grid.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-theme-id]');
+        if (!btn) return;
+        applyColorTheme(btn.dataset.themeId);
+        syncThemeModalState();
     });
+
+    document.getElementById('modeToggle').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        applyMode(btn.dataset.mode);
+        syncThemeModalState();
+    });
+}
+
+function syncThemeModalState() {
+    const activeTheme = getStoredColorTheme();
+    const activeMode = getStoredMode();
+    document.querySelectorAll('#swatchGrid .swatch').forEach((el) => {
+        el.classList.toggle('active', el.dataset.themeId === activeTheme);
+    });
+    document.querySelectorAll('#modeToggle .mode-btn').forEach((el) => {
+        const on = el.dataset.mode === activeMode;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-pressed', String(on));
+    });
+    updateThemeButtonIcon();
+}
+
+function updateThemeButtonIcon() {
+    const span = document.querySelector('#themeBtn [data-icon]');
+    span.setAttribute('data-icon', getStoredMode() === 'dark' ? 'moon' : 'sun');
+    hydrateIcons(document.getElementById('themeBtn'));
+}
+
+function wireModals() {
+    document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
+    });
+    document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeModal(backdrop.id);
+        });
+    });
+    document.getElementById('themeBtn').addEventListener('click', () => openModal('themeModal'));
 }
 
 // ── Init Map
@@ -179,15 +251,18 @@ function updateMap() {
             opacity: 0.7,
         }).addTo(map);
 
+        // White chip text is a fixed-meaning pairing: it sits on the saturated
+        // CAP severity fill, where --on-brand would not read.
         circle.bindPopup(`
-      <div style="font-family:'Noto Sans',sans-serif;min-width:160px">
-        <strong style="font-family:'Jua',sans-serif">${alert.headline || 'Flood Alert'}</strong><br/>
-        <span style="font-size:0.8em;color:#555">${alert.areaDesc || ''}</span><br/>
+      <div style="min-width:160px">
+        <strong>${alert.headline || 'Flood Alert'}</strong><br/>
+        <span style="font-size:0.8em;color:var(--muted)">${alert.areaDesc || ''}</span><br/>
         <span style="background:${colour};color:#fff;font-size:0.72em;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:4px">${alert.severity || 'Unknown'}</span><br/>
-        <p style="margin-top:6px;font-size:0.82em;color:#333">${alert.description || ''}</p>
-        <em style="font-size:0.75em;color:#888"><i class="fas fa-triangle-exclamation"></i> Circle = broadcast radius only</em>
+        <p style="margin-top:6px;font-size:0.82em;color:var(--ink)">${alert.description || ''}</p>
+        <em style="font-size:0.75em;color:var(--muted)"><span data-icon="alert-triangle"></span> Circle = broadcast radius only</em>
       </div>
     `);
+        circle.on('popupopen', (e) => hydrateIcons(e.popup.getElement()));
         alertCircles.push(circle);
         nearbyCircles.push({ layer: circle, lat: c.lat, lng: c.lng, radius: c.radius });
     });
@@ -319,24 +394,26 @@ function renderCard(alert, container, refLat, refLng, expired = false) {
         ${expired ? `<span class="urgency-badge">Resolved</span>` : ''}
         <span class="severity-badge ${sc}">${alert.severity || 'Unknown'}</span>
         ${alert.urgency && !isCancel ? `<span class="urgency-badge">${alert.urgency}</span>` : ''}
-        ${isNearby && !expired ? `<span class="nearby-tag"><i class="fas fa-location-dot"></i> Near You</span>` : ''}
+        ${isNearby && !expired ? `<span class="nearby-tag"><span data-icon="location"></span> Near You</span>` : ''}
       </div>
     </div>
-    ${alert.areaDesc ? `<div class="alert-area"><i class="fas fa-map-pin"></i> ${alert.areaDesc}</div>` : ''}
+    ${alert.areaDesc ? `<div class="alert-area"><span data-icon="pin"></span> ${alert.areaDesc}</div>` : ''}
     ${alert.description ? `<div class="alert-desc">${alert.description}</div>` : ''}
-    ${alert.instruction && !isCancel ? `<div class="alert-instruction"><i class="fas fa-lightbulb"></i> ${alert.instruction}</div>` : ''}
+    ${alert.instruction && !isCancel ? `<div class="alert-instruction"><span data-icon="lightbulb"></span> ${alert.instruction}</div>` : ''}
     <div class="alert-footer">
       <div>
         ${cdInfo.text ? `<div class="alert-countdown ${cdInfo.urgent ? 'urgent' : ''}" data-expires="${alert.expires || ''}">${cdInfo.text}</div>` : ''}
-        ${distText ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"><i class="fas fa-ruler"></i> ${distText}</div>` : ''}
+        ${distText ? `<div class="alert-distance"><span data-icon="ruler"></span> ${distText}</div>` : ''}
       </div>
-      ${c ? `<button class="alert-map-btn" data-lat="${c.lat}" data-lng="${c.lng}"><i class="fas fa-map"></i> Show on Map</button>` : ''}
+      ${c ? `<button class="alert-map-btn" type="button" data-lat="${c.lat}" data-lng="${c.lng}"><span data-icon="map"></span> Show on Map</button>` : ''}
     </div>
   `;
 
     card.querySelector('.alert-map-btn')?.addEventListener('click', (e) => {
-        const lat = parseFloat(e.target.dataset.lat);
-        const lng = parseFloat(e.target.dataset.lng);
+        // Read from the button, not e.target: the icon span is a child now.
+        const btn = e.currentTarget;
+        const lat = parseFloat(btn.dataset.lat);
+        const lng = parseFloat(btn.dataset.lng);
         map.flyTo([lat, lng], 15, {
             duration: 1.2
         });
@@ -346,6 +423,7 @@ function renderCard(alert, container, refLat, refLng, expired = false) {
         });
     });
 
+    hydrateIcons(card);
     container.appendChild(card);
 }
 
@@ -543,18 +621,18 @@ async function enableNotifications() {
     const statusEl = document.getElementById('notif-status-text');
 
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Push notifications are not supported in this browser.';
+        setHtml(statusEl, '<span data-icon="x-circle"></span> Push notifications are not supported in this browser.');
         return;
     }
 
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
-        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Permission denied. Please enable in browser settings.';
+        setHtml(statusEl, '<span data-icon="x-circle"></span> Permission denied. Please enable in browser settings.');
         return;
     }
 
     try {
-        statusEl.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i> Registering…';
+        setHtml(statusEl, '<span class="icon-spin" data-icon="hourglass"></span> Registering…');
         const reg = await navigator.serviceWorker.ready;
         const subscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -578,12 +656,12 @@ async function enableNotifications() {
         saveSubscription(subscription.endpoint, label, State.userLat, State.userLng);
         updateNotifModalStatus();
         renderSubscriptionsList();
-        statusEl.innerHTML = '<i class="fas fa-circle-check"></i> Notifications enabled! You\'ll be alerted when a flood warning is issued near you.';
+        setHtml(statusEl, '<span data-icon="check-circle"></span> Notifications enabled! You\'ll be alerted when a flood warning is issued near you.');
         showToast('Push notifications enabled!', 'success');
     } catch (err) {
         console.error('Push subscription error:', err);
         const errMsg = document.createTextNode(` Failed to enable notifications: ${err.message}`);
-        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i>';
+        setHtml(statusEl, '<span data-icon="x-circle"></span>');
         statusEl.appendChild(errMsg);
     }
 }
@@ -639,16 +717,17 @@ function renderSubscriptionsList() {
         item.className = 'notif-subscription-item';
         item.innerHTML = `
             <div class="notif-sub-info">
-                <i class="fas fa-location-dot"></i>
+                <span data-icon="location"></span>
                 <span>${sub.label || 'My Location'}</span>
             </div>
             <button class="btn-turn-off" data-endpoint="${sub.endpoint}">
-                <i class="fas fa-bell-slash"></i> Turn Off
+                <span data-icon="bell-off"></span> Turn Off
             </button>
         `;
         item.querySelector('button').addEventListener('click', () => {
             disableNotificationForLocation(sub.endpoint, sub.label);
         });
+        hydrateIcons(item);
         list.appendChild(item);
     });
 }
@@ -672,15 +751,15 @@ async function disableNotificationForLocation(endpoint, label) {
 function updateNotifModalStatus() {
     const statusEl = document.getElementById('notif-status-text');
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Push notifications are not supported in this browser.';
+        setHtml(statusEl, '<span data-icon="x-circle"></span> Push notifications are not supported in this browser.');
         return;
     }
     if (Notification.permission === 'denied') {
-        statusEl.innerHTML = '<i class="fas fa-circle-xmark"></i> Permission denied. Please enable notifications in your browser settings.';
+        setHtml(statusEl, '<span data-icon="x-circle"></span> Permission denied. Please enable notifications in your browser settings.');
     } else if (Notification.permission === 'granted' && getSavedSubscriptions().length > 0) {
-        statusEl.innerHTML = '<i class="fas fa-circle-check"></i> Notifications are active. You can add more locations below.';
+        setHtml(statusEl, '<span data-icon="check-circle"></span> Notifications are active. You can add more locations below.');
     } else {
-        statusEl.innerHTML = '';
+        setHtml(statusEl, '');
     }
 }
 
@@ -713,38 +792,21 @@ async function tryAutoLocate() {
 
 // ── Boot
 async function boot() {
-    applyTheme(State.theme);
-    initMap();
+    initTheme();
+    hydrateIcons();
+    updateThemeButtonIcon();
+    buildThemeModal();
+    wireModals();
 
-    // Bind theme picker
-    document.getElementById('theme-btn').addEventListener('click', () => {
-        document.getElementById('theme-modal').classList.remove('hidden');
-    });
-    document.querySelectorAll('.theme-option').forEach(btn => {
-        btn.addEventListener('click', () => {
-            applyTheme(btn.dataset.theme);
-        });
-    });
+    initMap();
 
     // Bind notification
     document.getElementById('notif-btn').addEventListener('click', () => {
-        document.getElementById('notif-modal').classList.remove('hidden');
+        openModal('notif-modal');
         updateNotifModalStatus();
         renderSubscriptionsList();
     });
     document.getElementById('enable-notif-btn').addEventListener('click', enableNotifications);
-
-    // Bind modal closes
-    document.querySelectorAll('.modal-close').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.getElementById(btn.dataset.close).classList.add('hidden');
-        });
-    });
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', e => {
-            if (e.target === overlay) overlay.classList.add('hidden');
-        });
-    });
 
     // Danger dismiss
     document.getElementById('danger-dismiss').addEventListener('click', () => {
@@ -764,7 +826,7 @@ async function boot() {
             State.searchLng = null;
             State.searchLabel = null;
             document.getElementById('search-input').value = '';
-            document.getElementById('location-icon').className = 'fas fa-location-dot';
+            setLocationIcon('location');
             document.getElementById('location-label').textContent = State.locationLabel || 'Your Location';
         }
         renderAlerts();
@@ -780,7 +842,7 @@ async function boot() {
     // Location grant
     document.getElementById('grant-location-btn').addEventListener('click', async () => {
         const btn = document.getElementById('grant-location-btn');
-        btn.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i> Getting location…';
+        setHtml(btn, '<span class="icon-spin" data-icon="hourglass"></span> Getting location…');
         btn.disabled = true;
         try {
             const pos = await requestLocation();
@@ -790,7 +852,7 @@ async function boot() {
             saveLocation(State.userLat, State.userLng, State.locationLabel);
             launchApp();
         } catch (err) {
-            btn.innerHTML = '<i class="fas fa-location-dot"></i> Allow Location Access';
+            setHtml(btn, '<span data-icon="location"></span> Allow Location Access');
             btn.disabled = false;
             showToast('Could not get your location. Please allow location access.', 'error');
         }
@@ -799,7 +861,7 @@ async function boot() {
     // Refresh saved location
     document.getElementById('refresh-location-btn').addEventListener('click', async () => {
         const btn = document.getElementById('refresh-location-btn');
-        btn.innerHTML = '<i class="fas fa-hourglass-half fa-spin"></i>';
+        setHtml(btn, '<span class="icon-spin" data-icon="hourglass"></span>');
         btn.disabled = true;
         try {
             const pos = await requestLocation();
@@ -811,14 +873,14 @@ async function boot() {
             State.searchLat = null;
             State.searchLng = null;
             State.searchLabel = null;
-            document.getElementById('location-icon').className = 'fas fa-location-dot';
+            setLocationIcon('location');
             renderAlerts();
             updateMap();
             showToast('Location updated', 'success');
         } catch (err) {
             showToast('Could not update location.', 'error');
         } finally {
-            btn.innerHTML = '<i class="fas fa-rotate-right"></i>';
+            setHtml(btn, '<span data-icon="refresh"></span>');
             btn.disabled = false;
         }
     });
@@ -869,7 +931,7 @@ async function handleSearch() {
         State.searchLat = null;
         State.searchLng = null;
         State.searchLabel = null;
-        document.getElementById('location-icon').className = 'fas fa-location-dot';
+        setLocationIcon('location');
         document.getElementById('location-label').textContent = State.locationLabel || 'Your Location';
         renderAlerts();
         updateMap();
@@ -886,7 +948,7 @@ async function handleSearch() {
     State.searchLat = result.lat;
     State.searchLng = result.lng;
     State.searchLabel = result.label;
-    document.getElementById('location-icon').className = 'fas fa-magnifying-glass';
+    setLocationIcon('search');
     document.getElementById('location-label').textContent = result.label;
 
     renderAlerts();

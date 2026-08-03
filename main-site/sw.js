@@ -1,18 +1,19 @@
-const CACHE = "sgfw-v5";
+const CACHE = "sgfw-v6";
 
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/script.js',
+  '/js/theme.js',
+  '/js/icons.js',
+  '/js/ui.js',
   '/manifest.json',
   '/favicon.ico',
   '/SGFW-main.png',
   '/SGFW-192.png',
   '/SGFW-512.png',
-  'https://fonts.googleapis.com/css?family=Jua',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
-  'https://use.fontawesome.com/releases/v6.5.2/js/all.js',
+  'https://fonts.googleapis.com/css2?family=Jua&display=swap',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 ];
@@ -63,7 +64,7 @@ self.addEventListener('fetch', event => {
   }
 
   // Let all other cross-origin requests (e.g. Nominatim geocoding) go straight
-  // to the network untouched — only proxy same-origin requests and the
+  // to the network untouched, only proxy same-origin requests and the
   // whitelisted third-party assets we actually want to cache.
   if (url.origin !== self.location.origin && !ASSETS.includes(event.request.url)) {
     return;

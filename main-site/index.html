@@ -2,6 +2,32 @@
 <html lang="en">
 
 <head>
+    <!-- Apply the saved theme before first paint, and migrate the pre-mode-axis key. -->
+    <script>
+        (function () {
+            var k = "sgfw";
+            var legacyMap = {
+                classic: "classic",
+                pink: "not-green-1",
+                lavender: "not-green-2",
+                yellow: "not-green-3",
+                mauve: "not-green-4",
+                cyan: "not-green-5",
+                white: "really-light-green"
+            };
+            try {
+                var legacy = localStorage.getItem("sgfw_theme");
+                if (legacy && !localStorage.getItem(k + ".colorTheme") && legacyMap[legacy]) {
+                    localStorage.setItem(k + ".colorTheme", legacyMap[legacy]);
+                }
+                var m = localStorage.getItem(k + ".mode") || "light";
+                var c = localStorage.getItem(k + ".colorTheme") || "classic";
+                document.documentElement.setAttribute("data-mode", m);
+                document.documentElement.setAttribute("data-color-theme", c);
+            } catch (e) { }
+        })();
+    </script>
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-FMCYFTFPEL"></script>
     <script>
@@ -29,7 +55,7 @@
     <meta property="og:site_name" content="UwU Apps" />
     <meta property="og:description" content="Real-time Singapore flood alerts at your fingertips!" />
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Jua">
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/style.css">
     <meta name="theme-color" content="#ccffcc" />
 
@@ -41,24 +67,22 @@
     <meta name="twitter:image:src" content="/SGFW-main.png">
     <meta property="og:image" content="/SGFW-main.png" />
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script defer="" src="https://use.fontawesome.com/releases/v6.5.2/js/all.js"></script>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 </head>
 
-<body data-theme="classic">
+<body>
     <!-- Location Permission Screen -->
     <div id="location-screen" class="fullscreen-overlay">
         <div class="location-card glass">
-            <div class="location-icon"><i class="fas fa-water"></i></div>
+            <div class="location-icon" data-icon="water"></div>
             <h1 class="app-title">SG Flood Watch</h1>
             <p class="location-tagline">Real-time flood alerts across Singapore</p>
             <p class="location-desc">This app needs your location to show nearby flood alerts and warn you if you're in
                 an affected area.</p>
             <button id="grant-location-btn" class="btn btn-primary btn-large">
-                <i class="fas fa-location-dot"></i> Allow Location Access
+                <span data-icon="location"></span> Allow Location Access
             </button>
             <p class="location-note">Powered by PUB data via LTA DataMall · Updates every 3 minutes</p>
         </div>
@@ -68,7 +92,7 @@
     <div id="danger-overlay" class="fullscreen-overlay hidden">
         <div class="danger-card">
             <div class="danger-pulse"></div>
-            <div class="danger-icon"><i class="fas fa-circle-exclamation"></i></div>
+            <div class="danger-icon" data-icon="alert-circle"></div>
             <h2 id="danger-headline">Flood Alert Near You</h2>
             <p id="danger-desc"></p>
             <p id="danger-instruction"></p>
@@ -86,7 +110,7 @@
         <!-- Header -->
         <header class="app-header glass">
             <div class="header-left">
-                <span class="header-logo"><i class="fas fa-water"></i></span>
+                <span class="header-logo" data-icon="water"></span>
                 <span class="header-title">SG Flood Watch</span>
             </div>
             <div class="header-right">
@@ -94,17 +118,19 @@
                     <span class="status-dot"></span>
                     <span id="status-text">Loading…</span>
                 </div>
-                <a id="telegram-btn" class="icon-btn" href="https://t.me/sgfloods_bot" target="_blank" rel="noopener" title="Chat with our Telegram bot"><svg viewBox="0 0 240 240" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.9 82.2-19.8 93.5c-1.5 6.7-5.4 8.3-11 5.2l-30.4-22.4-14.7 14.1c-1.6 1.6-3 3-6.1 3l2.2-30.9 56.3-50.9c2.5-2.2-.5-3.4-3.7-1.2l-69.6 43.8-30-9.4c-6.5-2-6.7-6.5 1.4-9.7l117.4-45.3c5.5-2 10.3 1.3 8 9.2z"/></svg></a>
-                <a id="donate-btn" class="icon-btn" href="https://donate.stripe.com/28o2akeAr3hv0DK6oo" target="_blank" rel="noopener" title="Support this project"><i class="fas fa-mug-hot"></i></a>
-                <button id="refresh-btn" class="icon-btn" title="Refresh now"><i class="fas fa-rotate-right"></i></button>
-                <button id="theme-btn" class="icon-btn" title="Change theme"><i class="fas fa-palette"></i></button>
-                <button id="notif-btn" class="icon-btn" title="Notifications"><i class="fas fa-bell"></i></button>
+                <a id="telegram-btn" class="icon-btn" href="https://t.me/sgfloods_bot" target="_blank" rel="noopener" title="Chat with our Telegram bot"><span data-icon="telegram"></span></a>
+                <a id="donate-btn" class="icon-btn" href="https://donate.stripe.com/28o2akeAr3hv0DK6oo" target="_blank" rel="noopener" title="Support this project"><span data-icon="coffee"></span></a>
+                <button id="refresh-btn" class="icon-btn" type="button" title="Refresh now"><span data-icon="refresh"></span></button>
+                <button class="icon-btn" id="themeBtn" type="button" aria-label="Theme" title="Change theme">
+                    <span data-icon="sun"></span>
+                </button>
+                <button id="notif-btn" class="icon-btn" type="button" title="Notifications"><span data-icon="bell"></span></button>
             </div>
         </header>
 
         <!-- All Clear Banner -->
         <div id="all-clear-banner" class="all-clear-banner glass hidden">
-            <span class="all-clear-icon"><i class="fas fa-circle-check"></i></span>
+            <span class="all-clear-icon" data-icon="check-circle"></span>
             <div>
                 <strong>All Clear</strong>
                 <span>No active flood alerts in Singapore right now.</span>
@@ -114,9 +140,9 @@
         <!-- Location + Search Bar -->
         <div class="location-bar glass">
             <div class="my-location-display">
-                <i id="location-icon" class="fas fa-location-dot"></i>
+                <span id="location-icon" data-icon="location"></span>
                 <span id="location-label">Locating…</span>
-                <button id="refresh-location-btn" class="icon-btn icon-btn-sm" title="Update my location"><i class="fas fa-rotate-right"></i></button>
+                <button id="refresh-location-btn" class="icon-btn small" type="button" title="Update my location"><span data-icon="refresh"></span></button>
             </div>
             <div class="search-row">
                 <input id="search-input" type="text" placeholder="Search area (e.g. Orchard, Tampines…)"
@@ -128,8 +154,8 @@
 
         <!-- Last Refreshed + Error -->
         <div class="meta-bar">
-            <span id="last-refreshed">Last refreshed: —</span>
-            <span id="fetch-error" class="fetch-error hidden"><i class="fas fa-triangle-exclamation"></i> Unable to reach PUB data — showing last known alerts</span>
+            <span id="last-refreshed">Last refreshed: –</span>
+            <span id="fetch-error" class="fetch-error hidden"><span data-icon="alert-triangle"></span> Unable to reach PUB data, showing last known alerts</span>
         </div>
 
         <!-- Map -->
@@ -141,7 +167,7 @@
                 <span><span class="legend-dot severe"></span>Severe</span>
                 <span><span class="legend-dot moderate"></span>Moderate</span>
                 <span><span class="legend-dot minor"></span>Minor</span>
-                <span class="legend-note"><i class="fas fa-triangle-exclamation"></i> Circle = broadcast radius, not flood extent</span>
+                <span class="legend-note"><span data-icon="alert-triangle"></span> Circle = broadcast radius, not flood extent</span>
             </div>
         </div>
 
@@ -165,59 +191,21 @@
 
     </div>
 
-    <!-- Theme Picker Modal -->
-    <div id="theme-modal" class="modal-overlay hidden">
-        <div class="modal glass">
-            <div class="modal-header">
-                <h3>Choose Theme</h3>
-                <button class="modal-close" data-close="theme-modal">✕</button>
-            </div>
-            <div class="theme-grid">
-                <button class="theme-option active" data-theme="classic">
-                    <span class="theme-swatch" style="background:#ccffcc"></span>
-                    <span>Classic</span>
-                </button>
-                <button class="theme-option" data-theme="pink">
-                    <span class="theme-swatch" style="background:#ffcccc"></span>
-                    <span>Not Green 1</span>
-                </button>
-                <button class="theme-option" data-theme="lavender">
-                    <span class="theme-swatch" style="background:#ccccff"></span>
-                    <span>Not Green 2</span>
-                </button>
-                <button class="theme-option" data-theme="yellow">
-                    <span class="theme-swatch" style="background:#ffffcc"></span>
-                    <span>Not Green 3</span>
-                </button>
-                <button class="theme-option" data-theme="mauve">
-                    <span class="theme-swatch" style="background:#ffccff"></span>
-                    <span>Not Green 4</span>
-                </button>
-                <button class="theme-option" data-theme="cyan">
-                    <span class="theme-swatch" style="background:#ccffff"></span>
-                    <span>Not Green 5</span>
-                </button>
-                <button class="theme-option" data-theme="white">
-                    <span class="theme-swatch" style="background:#ffffff;border:1px solid #ccc"></span>
-                    <span>Really Really Light Green</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Notification Permission Modal -->
-    <div id="notif-modal" class="modal-overlay hidden">
-        <div class="modal glass">
-            <div class="modal-header">
-                <h3><i class="fas fa-bell"></i> Push Notifications</h3>
-                <button class="modal-close" data-close="notif-modal">✕</button>
+    <div id="notif-modal" class="modal-backdrop hidden">
+        <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="notifModalTitle">
+            <div class="modal-head">
+                <h2 id="notifModalTitle">Push Notifications</h2>
+                <button class="icon-btn small" type="button" data-close-modal="notif-modal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
             </div>
             <div class="modal-body">
                 <p>Get notified when a new flood alert is issued near your current location.</p>
                 <div id="notif-status-text" class="notif-status"></div>
                 <button id="enable-notif-btn" class="btn btn-primary">Enable Notifications</button>
                 <div id="notif-subscriptions-section" class="notif-subscriptions hidden">
-                    <h4 class="notif-sub-heading"><i class="fas fa-bell"></i> Enabled Locations</h4>
+                    <h4 class="notif-sub-heading"><span data-icon="bell"></span> Enabled Locations</h4>
                     <div id="notif-subscriptions-list"></div>
                 </div>
             </div>
@@ -226,6 +214,25 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- Theme Picker Modal -->
+    <div class="modal-backdrop hidden" id="themeModal">
+        <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
+            <div class="modal-head">
+                <h2 id="themeModalTitle">Theme</h2>
+                <button class="icon-btn small" type="button" data-close-modal="themeModal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
+            </div>
+            <p class="modal-section-label">Mode</p>
+            <div class="mode-toggle" id="modeToggle">
+                <button class="mode-btn" type="button" data-mode="light" aria-pressed="false"><span data-icon="sun"></span>Light</button>
+                <button class="mode-btn" type="button" data-mode="dark" aria-pressed="false"><span data-icon="moon"></span>Dark</button>
+            </div>
+            <p class="modal-section-label">Brand colour</p>
+            <div class="swatch-grid" id="swatchGrid"></div>
+        </div>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
