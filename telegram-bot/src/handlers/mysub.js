@@ -1,6 +1,7 @@
 import { doMySub } from '../actions.js';
+import { sendRichMessage } from '../reply.js';
 
 export async function mysubHandler(ctx) {
-    const { text, keyboard } = doMySub(ctx.chat.id);
-    await ctx.reply(text, { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: keyboard } });
+    const { rich, keyboard } = doMySub(ctx.chat.id);
+    await sendRichMessage(ctx.telegram, ctx.chat.id, rich, keyboard);
 }

@@ -1,6 +1,7 @@
 import { doSubscribe } from '../actions.js';
+import { sendRichMessage } from '../reply.js';
 
 export async function subHandler(ctx) {
-    const { text, keyboard } = doSubscribe(ctx.chat.id, ctx.from);
-    await ctx.reply(text, { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: keyboard } });
+    const { rich, keyboard } = doSubscribe(ctx.chat.id, ctx.from);
+    await sendRichMessage(ctx.telegram, ctx.chat.id, rich, keyboard);
 }

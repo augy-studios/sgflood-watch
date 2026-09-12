@@ -1,6 +1,7 @@
 import { doUnsubscribe } from '../actions.js';
+import { sendRichMessage } from '../reply.js';
 
 export async function unsubHandler(ctx) {
-    const { text, keyboard } = doUnsubscribe(ctx.chat.id);
-    await ctx.reply(text, { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: keyboard } });
+    const { rich, keyboard } = doUnsubscribe(ctx.chat.id);
+    await sendRichMessage(ctx.telegram, ctx.chat.id, rich, keyboard);
 }

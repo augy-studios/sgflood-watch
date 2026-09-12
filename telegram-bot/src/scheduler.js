@@ -1,15 +1,17 @@
 import { getSchedule, upsertSchedule, getSeenAlert, upsertSeenAlert, getActiveSeenAlertKeys, getAllSubscribers } from './db.js';
 import { fetchFloodAlerts, alertKey, isActive } from './lta.js';
-import { formatAlert, escapeMarkdownV2 } from './format.js';
+import { formatAlert } from './format.js';
+import { sendRichMessage } from './reply.js';
 
 const JOB_NAME = 'poll_alerts';
 const TICK_MS = 30_000; // how often the loop wakes up to check the schedule table
 
-async function broadcast(bot, text) {
+// `rich` is the `{ markdown, fallback }` message contract from format.js.
+async function broadcast(bot, rich) {
     const subscribers = getAllSubscribers();
     for (const { chat_id } of subscribers) {
         try {
-            await bot.telegram.sendMessage(chat_id, text, { parse_mode: 'MarkdownV2' });
+            await sendRichMessage(bot.telegram, chat_id, rich);
         } catch (err) {
             // A blocked/deleted chat shouldn't take down the whole broadcast.
             console.error(`Failed to notify chat ${chat_id}:`, err.message);
@@ -35,13 +37,21 @@ async function pollOnce(bot, seedOnly) {
             currentActiveKeys.add(key);
             const isNew = !previouslySeen || previouslySeen.status !== 'active';
             if (isNew && !seedOnly) {
-                await broadcast(bot, `🚨 *New flood alert*\n\n${formatAlert(alert)}`);
+                const body = formatAlert(alert);
+                await broadcast(bot, {
+                    markdown: `# 🚨 New flood alert\n\n${body.markdown}`,
+                    fallback: `🚨 New flood alert\n\n${body.fallback}`
+                });
             }
             upsertSeenAlert(key, alert.headline, alert.areaDesc, 'active');
         } else {
             const wasActive = previouslySeen && previouslySeen.status === 'active';
             if (wasActive && !seedOnly) {
-                await broadcast(bot, `✅ *Flood alert cancelled*\n\n${escapeMarkdownV2(alert.headline || 'A flood alert')} has been called off\\.`);
+                // One-line notice: no headings/tables, so it goes out as plain text.
+                await broadcast(bot, {
+                    markdown: null,
+                    fallback: `✅ Flood alert cancelled\n\n${alert.headline || 'A flood alert'} has been called off.`
+                });
             }
             upsertSeenAlert(key, alert.headline, alert.areaDesc, 'cancelled');
         }
