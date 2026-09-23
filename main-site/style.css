@@ -204,14 +204,14 @@ body.modal-open { overflow: hidden; }
 
 /* ---- mode toggle ---- */
 .mode-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   padding: 4px;
   border-radius: 14px;
   background: var(--surface);
 }
 .mode-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -226,6 +226,17 @@ body.modal-open { overflow: hidden; }
 .mode-btn.active {
   background: var(--brand-fill);
   color: var(--on-brand);
+}
+
+/* Time based mode. Light and dark stay side by side and the third spans the
+   row beneath them: two equal columns would put the longer label in a box
+   too narrow to read at 320px, and the full width row also signals this is
+   a different kind of choice, a rule for picking a mode rather than a mode. */
+.mode-btn-wide { grid-column: 1 / -1; }
+.mode-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted-strong);
 }
 
 /* ---- swatch grid ---- */
@@ -508,6 +519,45 @@ body.modal-open { overflow: hidden; }
   border-radius: var(--radius);
 }
 .btn-danger-dismiss:hover { background: color-mix(in srgb, var(--error) 24%, transparent); }
+
+/* ---- update bar (drawn by js/sw-register.js) ---- */
+/* Full width above everything, quieter than the glass header. The brand
+   swatches are pale pastels, so the tint is heavier than a saturated accent
+   would need to read as a notice; it stays dark enough in dark mode that
+   --ink, not --on-brand, is the readable text colour on it. */
+.update-notice {
+  /* Above the fullscreen overlays, so a reader still on the location screen
+     can reach it. Same backdrop as the page, so it reads the same there. */
+  position: relative;
+  z-index: 1001;
+  background: color-mix(in srgb, var(--brand) 22%, transparent);
+  border-bottom: 1px solid var(--surface-border);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+/* A flood warning outranks a new version: only the more urgent one draws.
+   The bar comes back once the warning is dismissed. */
+body:has(#danger-overlay:not(.hidden)) .update-notice { display: none; }
+
+.update-notice-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  /* Under the notch on a phone, where the bar is the topmost thing on screen. */
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.update-notice p { flex: 1 1 auto; min-width: 0; }
+.update-notice .btn {
+  flex: none;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  box-shadow: none;
+}
 
 /* ---- all clear banner ---- */
 .all-clear-banner {

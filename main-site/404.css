@@ -310,3 +310,42 @@ body {
     right: -100%;
   }
 }
+
+/* Update bar, drawn by js/sw-register.js. Same markup as the main site;
+   this page does not load style.css, so it gets its own few rules. */
+.update-notice {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-family: Jua, sans-serif;
+  font-size: 0.875rem;
+}
+
+.update-notice-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.update-notice p { flex: 1 1 auto; min-width: 0; margin: 0; }
+
+.update-notice .btn {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: white;
+}
+
+.update-notice .btn-primary {
+  background: #ccffcc;
+  border-color: #ccffcc;
+  color: #121815;
+}
